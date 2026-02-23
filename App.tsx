@@ -12,7 +12,6 @@ import { Question, questions } from './src/data/questions';
 
 type AppScreen = 'LOBBY' | 'GAME' | 'RESULT';
 type Phase = 'PREVIEW' | 'ANSWERING_P1' | 'ANSWERING_P2' | 'SCORING';
-
 type PlayerKey = 'p1' | 'p2';
 
 type ScoreState = {
@@ -27,6 +26,7 @@ type ScoringContext = {
 
 const PREVIEW_SECONDS = 10;
 const ANSWERING_SECONDS = 10;
+const SCORING_SECONDS = 2;
 const WIN_SCORE = 3;
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase('tr-TR');
@@ -42,9 +42,7 @@ export default function App() {
   const [scores, setScores] = useState<ScoreState>({ p1: 0, p2: 0 });
   const [answerInput, setAnswerInput] = useState('');
   const [foundAnswers, setFoundAnswers] = useState<string[]>([]);
-  const [scoringContext, setScoringContext] = useState<ScoringContext>({
-    message: '',
-  });
+  const [scoringContext, setScoringContext] = useState<ScoringContext>({ message: '' });
 
   const currentQuestion: Question = questions[questionIndex % questions.length];
 
@@ -79,50 +77,23 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [screen, secondsLeft, phase]);
+  }, [screen, phase, secondsLeft]);
 
-  useEffect(() => {
-    if (screen !== 'GAME') {
+  const moveToPhase = (nextPhase: Phase) => {
+    setPhase(nextPhase);
+
+    if (nextPhase === 'PREVIEW') {
+      setSecondsLeft(PREVIEW_SECONDS);
       return;
     }
 
-    if (phase === 'PREVIEW' && secondsLeft === 0) {
-      setPhase('ANSWERING_P1');
+    if (nextPhase === 'ANSWERING_P1' || nextPhase === 'ANSWERING_P2') {
       setSecondsLeft(ANSWERING_SECONDS);
       return;
     }
 
-    if (phase === 'ANSWERING_P1' && secondsLeft === 0) {
-      moveToScoring({
-        awardedTo: 'p2',
-        message: `${player2Name || 'Oyuncu 2'} +1 puan kazandı (P1 süresi doldu).`,
-      });
-      return;
-    }
-
-    if (phase === 'ANSWERING_P2' && secondsLeft === 0) {
-      moveToScoring({
-        awardedTo: 'p1',
-        message: `${player1Name || 'Oyuncu 1'} +1 puan kazandı (P2 süresi doldu).`,
-      });
-      return;
-    }
-
-    if (phase === 'SCORING' && secondsLeft === 0) {
-      if (winnerName) {
-        setScreen('RESULT');
-      } else {
-        nextQuestion();
-      }
-    }
-  }, [
-    phase,
-    player1Name,
-    player2Name,
-    screen,
-    secondsLeft,
-    winnerName,
-  ]);
+    setSecondsLeft(SCORING_SECONDS);
+  };
 
   const moveToScoring = ({ message, awardedTo }: ScoringContext) => {
     setScoringContext({ message, awardedTo });
@@ -134,25 +105,57 @@ export default function App() {
       }));
     }
 
-    setPhase('SCORING');
-    setSecondsLeft(2);
+    moveToPhase('SCORING');
     setAnswerInput('');
   };
 
   const nextQuestion = () => {
     setQuestionIndex((prev) => prev + 1);
-    setPhase('PREVIEW');
-    setSecondsLeft(PREVIEW_SECONDS);
+    moveToPhase('PREVIEW');
     setAnswerInput('');
     setFoundAnswers([]);
     setScoringContext({ message: '' });
   };
 
+  useEffect(() => {
+    if (screen !== 'GAME' || secondsLeft !== 0) {
+      return;
+    }
+
+    if (phase === 'PREVIEW') {
+      moveToPhase('ANSWERING_P1');
+      return;
+    }
+
+    if (phase === 'ANSWERING_P1') {
+      moveToScoring({
+        awardedTo: 'p2',
+        message: `${player2Name || 'Oyuncu 2'} +1 puan kazandı (P1 süresi doldu).`,
+      });
+      return;
+    }
+
+    if (phase === 'ANSWERING_P2') {
+      moveToScoring({
+        awardedTo: 'p1',
+        message: `${player1Name || 'Oyuncu 1'} +1 puan kazandı (P2 süresi doldu).`,
+      });
+      return;
+    }
+
+    if (phase === 'SCORING') {
+      if (winnerName) {
+        setScreen('RESULT');
+      } else {
+        nextQuestion();
+      }
+    }
+  }, [phase, player1Name, player2Name, screen, secondsLeft, winnerName]);
+
   const startGame = () => {
     setScreen('GAME');
     setQuestionIndex(0);
-    setPhase('PREVIEW');
-    setSecondsLeft(PREVIEW_SECONDS);
+    moveToPhase('PREVIEW');
     setScores({ p1: 0, p2: 0 });
     setFoundAnswers([]);
     setAnswerInput('');
@@ -163,8 +166,7 @@ export default function App() {
     setScreen('LOBBY');
     setScores({ p1: 0, p2: 0 });
     setQuestionIndex(0);
-    setPhase('PREVIEW');
-    setSecondsLeft(PREVIEW_SECONDS);
+    moveToPhase('PREVIEW');
     setFoundAnswers([]);
     setAnswerInput('');
     setScoringContext({ message: '' });
@@ -182,24 +184,37 @@ export default function App() {
     }
 
     if (foundAnswers.includes(normalizedInput)) {
+      setScoringContext({ message: 'Bu cevap zaten yazıldı, duplicate cevap kabul edilmez.' });
       setAnswerInput('');
       return;
     }
 
-    if (allAnswers.includes(normalizedInput)) {
-      const nextFoundAnswers = [...foundAnswers, normalizedInput];
-      setFoundAnswers(nextFoundAnswers);
+    if (!allAnswers.includes(normalizedInput)) {
+      setScoringContext({ message: 'Bu cevap doğru değil. Aynı oyuncu devam edebilir.' });
       setAnswerInput('');
-
-      if (nextFoundAnswers.length === allAnswers.length) {
-        moveToScoring({
-          message: 'Tüm doğru cevaplar yazıldı. Bu turda puan yok, sonraki soruya geçiliyor.',
-        });
-      }
       return;
     }
 
+    const nextFoundAnswers = [...foundAnswers, normalizedInput];
+    setFoundAnswers(nextFoundAnswers);
     setAnswerInput('');
+    setScoringContext({ message: '' });
+
+    if (nextFoundAnswers.length === allAnswers.length) {
+      moveToScoring({
+        message: 'Tüm doğru cevaplar yazıldı. Bu turda puan yok, sonraki soruya geçiliyor.',
+      });
+      return;
+    }
+
+    if (phase === 'ANSWERING_P1') {
+      moveToPhase('ANSWERING_P2');
+      return;
+    }
+
+    moveToScoring({
+      message: 'İki oyuncu da cevap verdi. Sonraki soruya geçiliyor.',
+    });
   };
 
   const activePlayerLabel =
@@ -304,7 +319,16 @@ export default function App() {
         )}
       </View>
 
-      {phase === 'SCORING' && (
+      <View style={styles.answersList}>
+        <Text style={styles.answersTitle}>Doğru Cevaplar</Text>
+        {currentQuestion.answers.map((answer) => (
+          <Text key={answer} style={styles.answerItem}>
+            • {answer}
+          </Text>
+        ))}
+      </View>
+
+      {!!scoringContext.message && (
         <View style={styles.scoringPanel}>
           <Text style={styles.scoringText}>{scoringContext.message}</Text>
         </View>
@@ -397,7 +421,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
-    minHeight: 130,
+    minHeight: 90,
   },
   answersTitle: {
     fontSize: 16,
