@@ -1,0 +1,39 @@
+plugins {
+    id "com.android.application"
+}
+
+def apiBase = (project.findProperty("CINEMATIC_API_BASE")
+        ?: System.getenv("CINEMATIC_API_BASE")
+        ?: "http://127.0.0.1:3001")
+        .toString()
+        .trim()
+        .replaceAll(/\/+$/, "")
+def apiBaseEscaped = apiBase.replace("\\", "\\\\").replace("\"", "\\\"")
+
+android {
+    namespace "com.mazlu.cinematicnative"
+    compileSdk 36
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
+        applicationId "com.mazlu.cinematicnative"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "1.0-native"
+        buildConfigField "String", "DEFAULT_API_BASE", "\"${apiBaseEscaped}\""
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "androidx.media3:media3-exoplayer:1.4.1"
+    implementation "androidx.media3:media3-ui:1.4.1"
+}

@@ -1,0 +1,15 @@
+{
+  "refreshMinutes": 30,
+  "sources": [
+    {
+      "name": "IPTV-org Turkey",
+      "url": "https://iptv-org.github.io/iptv/countries/tr.m3u",
+      "active": true
+    },
+    {
+      "name": "IPTV-org Turkish Language",
+      "url": "https://iptv-org.github.io/iptv/languages/tur.m3u",
+      "active": true
+    }
+  ]
+}

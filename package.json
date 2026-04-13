@@ -1,0 +1,33 @@
+{
+  "name": "cinematic-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node stream-server.js",
+    "start:web": "node web-server.js",
+    "start:api": "node stream-server.js",
+    "api:set": "node scripts/set-api-base.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check:stability": "node scripts/stability-perf.js",
+    "prepare:web": "node scripts/prepare-web-assets.js",
+    "apk:sync": "npm run prepare:web && npx cap sync android",
+    "apk:open": "npm run apk:sync && npx cap open android",
+    "apk:build:debug": "npm run apk:sync && cd android && gradlew.bat assembleDebug",
+    "apk:build:local": "node scripts/build-apk-local.js",
+    "native:build:local": "node scripts/build-native-apk-local.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-fetch": "^2.7.0",
+    "puppeteer-core": "^24.40.0"
+  }
+}

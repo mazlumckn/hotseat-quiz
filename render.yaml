@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: cinematic-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: ENABLE_WEB_FALLBACK
+        value: "0"
+      - key: STREAM_FETCH_TIMEOUT_MS
+        value: "15000"
+      - key: IPTV_FETCH_TIMEOUT_MS
+        value: "15000"
+      - key: IPTV_REFRESH_MINUTES
+        value: "30"
+      - key: IPTV_DATA_DIR
+        value: /var/data
+      - key: PUBLIC_BASE_URL
+        sync: false
+    disk:
+      name: iptv-data
+      mountPath: /var/data
+      sizeGB: 1
